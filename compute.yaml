@@ -8,11 +8,11 @@ resources:
     properties:
       group: ungrouped
       config: |
-        # !/bin/bash
+        #!/bin/bash
         sudo hostnamectl set-hostname --static identity.warp.lab4.eng.bos.redhat.com
-        export address=`ip -4 addr show eth0 primary | awk '/inet/ {sub ("/24", "", $2); print $2}'`
+        export address=`ip -4 addr  show eth0 primary | awk '/inet/ {sub ("/24" ,"" , $2) ; print $2}'`
         echo $address `hostname` | sudo tee -a /etc/hosts
-        sudo yum -y install ipa-server bind bind-dyndb-ldap
+        sudo yum -y install ipa-server-dnsexport address=`ip -4 addr  show eth0 primary | awk '/inet/ {sub ("/24" ,"" , $2) ; print $2}'`
 
   my_instance:
     type: OS::Nova::Server
