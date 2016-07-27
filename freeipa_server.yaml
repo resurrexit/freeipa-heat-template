@@ -1,0 +1,67 @@
+heat_template_version: 2015-04-30
+
+description: Template to deploy a FreeIPA server.
+
+parameters:
+  AdminPassword:
+    default: FreeIPA4All
+    description: The password for the FreeIPA admin account.
+    type: string
+    hidden: true
+
+  DirectoryManagerPassword:
+    default: FreeIPA4All
+    description: The password for superuser, LDAP service.
+    type: string
+    hidden: true
+
+  DNSNameserver:
+    default: "192.168.23.1"
+    description: The DNS server the Identity server will use to install packages.
+    type: string
+    hidden: false
+
+  IdentityCount:
+    type: number
+    default: 1
+    constraints:
+      - range: {min: 1}
+
+resources:
+  install_script:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config:
+        str_replace:
+            params:
+                $AdminPassword: {get_param: AdminPassword}
+                $DirectoryManagerPassword: {get_param: DirectoryManagerPassword}
+                $DNSNameserver: {get_param: DNSNameserver}
+            template: |
+              #!/bin/bash
+              set -eux
+
+              sudo hostnamectl set-hostname --static identity.warp.lab4.eng.bos.redhat.com
+              export address=`ip -4 addr  show eth0 primary | awk '/inet/ {sub ("/24" ,"" , $2) ; print $2}'`
+              echo $address `hostname` | sudo tee -a /etc/hosts
+              #sudo echo "nameserver $DNSNameserver" >> /etc/resolv.conf
+
+              sudo yum -y install ipa-server-dns
+
+              sudo ipa-server-install -U -r `hostname -d|tr "[a-z]" "[A-Z]"` \
+                                 -p $DirectoryManagerPassword -a $AdminPassword \
+                                 --setup-dns --forwarder=$DNSNameserver
+
+  my_instance:
+    type: OS::Nova::Server
+    properties:
+      key_name: default
+      image: overcloud-full
+      flavor: oooq_control
+      name: identity-base
+      instance_name: identity-base
+      networks:
+        - network: ctlplane
+      user_data_format: SOFTWARE_CONFIG
+      user_data: {get_resource: install_script}
