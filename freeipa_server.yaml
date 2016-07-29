@@ -47,7 +47,13 @@ resources:
               echo $address `hostname` | sudo tee -a /etc/hosts
               #sudo echo "nameserver $DNSNameserver" >> /etc/resolv.conf
 
-              sudo yum -y install ipa-server-dns
+              # Installing the packages we need.
+              sudo yum -y install ipa-server-dns epel-release rng-tools
+              sudo yum -y install haveged
+
+              # Entropy generation; otherwise, ipa-server-install will lag.
+              sudo chkconfig haveged on
+              sudo service haveged start
 
               sudo ipa-server-install -U -r `hostname -d|tr "[a-z]" "[A-Z]"` \
                                  -p $DirectoryManagerPassword -a $AdminPassword \
@@ -60,7 +66,6 @@ resources:
       image: overcloud-full
       flavor: oooq_control
       name: identity-base
-      instance_name: identity-base
       networks:
         - network: ctlplane
       user_data_format: SOFTWARE_CONFIG
